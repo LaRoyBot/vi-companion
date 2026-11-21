@@ -6,6 +6,7 @@ const root = new URL("../", import.meta.url);
 const auth = await readFile(new URL("../apps/web/lib/mcp/server.ts", import.meta.url), "utf8");
 const route = await readFile(new URL("../apps/web/app/mcp/route.ts", import.meta.url), "utf8");
 const metadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
+const pathMetadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/mcp/route.ts", import.meta.url), "utf8");
 const challenge = await readFile(new URL("../apps/web/app/.well-known/openai-apps-challenge/route.ts", import.meta.url), "utf8");
 const hookMigration = await readFile(new URL("../supabase/migrations/20261121115000_fix_oauth_hook_client_id_variable.sql", import.meta.url), "utf8");
 const rlsMigration = await readFile(new URL("../supabase/migrations/20261121114000_fix_oauth_resource_claim_and_rls.sql", import.meta.url), "utf8");
@@ -49,9 +50,10 @@ test("public directory short description meets the 30-character limit", () => {
 test("OIDC scopes needed for stable profile identity are explicitly requested", () => {
   const auth = manifest.mcpServers["vi-companion"].extensions["com.openai"].auth;
   assert.deepEqual(auth.baseScopes, ["openid", "email", "profile"]);
-  assert.deepEqual(auth.baseScopes, ["openid", "email", "profile"]);
-  assert.equal("oidcEnabled" in auth, false);
-  assert.equal("oidcScopesSupported" in auth, false);
+  assert.equal(auth.oidcEnabled, true);
+  assert.deepEqual(auth.oidcScopesSupported, ["openid", "email", "profile"]);
+  assert.match(auth.oidcConfigurationUrl, /openid-configuration/);
+  assert.match(auth.oidcUserinfoEndpoint, /oauth\/userinfo/);
 });
 test("hosted Supabase config documents required OAuth server and access-token hook toggles", () => {
   assert.match(config, /\[auth\.oauth_server\]/);
@@ -63,8 +65,9 @@ test("console/game-state and rights-gated knowledge stay disabled", () => {
   assert.match(auth, /knowledge_retrieval:"disabled_pending_rights_review"/);
 });
 test("protected-resource metadata publishes the canonical resource and issuer", () => {
-  assert.match(metadata, /authorization_servers/);
-  assert.match(metadata, /MCP_RESOURCE_URL/);
+  assert.match(metadata, /protectedResourceMetadataResponse/);
+  assert.match(pathMetadata, /protectedResourceMetadataResponse/);
+  assert.match(auth, /oauth-protected-resource\/mcp/);
 });
 test("OpenAI domain challenge returns only the exact configured portal token", () => {
   assert.match(challenge, /OPENAI_APPS_CHALLENGE_TOKEN/);
