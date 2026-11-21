@@ -2,11 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
+const root = new URL("../", import.meta.url);
 const auth = await readFile(new URL("../apps/web/lib/mcp/server.ts", import.meta.url), "utf8");
 const route = await readFile(new URL("../apps/web/app/mcp/route.ts", import.meta.url), "utf8");
 const metadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
 const challenge = await readFile(new URL("../apps/web/app/.well-known/openai-apps-challenge/route.ts", import.meta.url), "utf8");
 const migration = await readFile(new URL("../supabase/migrations/20261121113000_secure_mcp_oauth_client_allowlist.sql", import.meta.url), "utf8");
+const manifest = JSON.parse(await readFile(new URL("../mcp.json", import.meta.url), "utf8"));
+const config = await readFile(new URL("../supabase/config.toml", import.meta.url), "utf8");
 
 test("resource uses asymmetric signature, Supabase issuer, MCP audience and expiration", () => {
   assert.match(auth, /algorithms:\["ES256","RS256"\]/);
@@ -29,6 +32,17 @@ test("MCP claims are granted only to explicitly allowlisted OAuth clients", () =
   assert.match(migration, /event->>'client_id'/);
   assert.match(migration, /private\.approved_mcp_oauth_clients/);
   assert.match(migration, /mcp_scopes/);
+});
+test("OIDC scopes needed for stable profile identity are explicitly requested", () => {
+  const auth = manifest.mcpServers["vi-companion"].extensions["com.openai"].auth;
+  assert.deepEqual(auth.baseScopes, ["openid", "email", "profile"]);
+  assert.equal(auth.oidcEnabled, true);
+  assert.deepEqual(auth.oidcScopesSupported, ["openid", "email", "profile"]);
+});
+test("hosted Supabase config documents required OAuth server and access-token hook toggles", () => {
+  assert.match(config, /\[auth\.oauth_server\]/);
+  assert.match(config, /allow_dynamic_registration = true/);
+  assert.match(config, /\[auth\.hook\.custom_access_token\]/);
 });
 test("console/game-state and rights-gated knowledge stay disabled", () => {
   assert.match(auth, /game_state_access:false/);
