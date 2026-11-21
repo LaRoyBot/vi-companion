@@ -3,11 +3,11 @@ import { McpServer } from "@modelcontextprotocol/server";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import { createClient, type User } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 
 type ExtraAuth = AuthInfo & { extra: { userId: string; mcpScopes: string[] } };
 type Ctx = { http?: { authInfo?: AuthInfo } };
-type DBContext = { user: User; db: ReturnType<typeof createClient>; auth: ExtraAuth };
+type DBContext = { user: User; db: SupabaseClient<any, "public">; auth: ExtraAuth };
 type Result = { content: Array<{type:"text";text:string}>; structuredContent?:Record<string,unknown>; isError?:boolean; _meta?:Record<string,unknown> };
 const resource = () => {
   const value=process.env.MCP_RESOURCE_URL;
@@ -49,7 +49,7 @@ async function withUser(ctx:Ctx,scope:"player:read"|"player:write",fn:(x:DBConte
   const url=process.env.SUPABASE_URL??process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key=process.env.SUPABASE_PUBLISHABLE_KEY??process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if(!url||!key)return fail("VI Companion's player data service is not configured.");
-  const db=createClient(url,key,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false},global:{headers:{Authorization:`Bearer ${auth.token}`}}});
+  const db=createClient<any>(url,key,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false},global:{headers:{Authorization:`Bearer ${auth.token}`}}});
   const {data,error}=await db.auth.getUser(auth.token);
   if(error||!data.user||data.user.id!==auth.extra.userId)return authFail();
   return fn({user:data.user,db,auth});
