@@ -1,0 +1,7 @@
+project_id = "vi-companion"
+
+[functions.mcp]
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
