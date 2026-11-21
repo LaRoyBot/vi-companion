@@ -12,6 +12,7 @@ type CollectionRecord=Pick<Tables<"collections">,"id"|"title"|"description"|"cat
 type SessionRecord={id:string;title:string;desc:string|null;platform:Platform;started:string;ended:string|null;status:"active"|"completed"|"cancelled"};
 type PlatformRecord={id:string;name:string;platform:Platform};
 type NoteRecord=Pick<Tables<"personal_notes">,"id"|"title"|"body"|"tags"|"created_at">;
+type OAuthGrant={id:string;client_id:string;client_name:string;scopes:string[];created_at:string;updated_at:string};
 type Data={sessions:SessionRecord[];objectives:ObjectiveRecord[];platforms:PlatformRecord[];collections:CollectionRecord[];notes:NoteRecord[];displayName:string;preferredPlatform:Platform;spoilerPreference:Tables<"player_profiles">["spoiler_preference"]};
 const empty:Data={sessions:[],objectives:[],platforms:[],collections:[],notes:[],displayName:"",preferredPlatform:"ps5",spoilerPreference:"avoid"};
 const platformName=(p:Platform)=>p==="ps5"?"PlayStation 5":"Xbox Series X|S";
@@ -23,6 +24,9 @@ export default function CompanionApp(){
  const [user,setUser]=useState<{id:string;email:string|null}|null>(null);
  const [d,setD]=useState<Data>(empty),[tab,setTab]=useState<Tab>("overview"),[ready,setReady]=useState(()=>!supabase);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState("");
+ const [grants,setGrants]=useState<OAuthGrant[]>([]);
+ const [grantsStatus,setGrantsStatus]=useState<"idle"|"loading"|"ready"|"unavailable">("idle");
+ const [grantsError,setGrantsError]=useState("");
  const [title,setTitle]=useState(""),[desc,setDesc]=useState(""),[platform,setPlatform]=useState<Platform>("ps5"),[name,setName]=useState(""),[collection,setCollection]=useState(""),[noteTitle,setNoteTitle]=useState(""),[note,setNote]=useState("");
  const refresh=useCallback(async(uid?:string)=>{
   if(!supabase)return;
@@ -66,6 +70,28 @@ export default function CompanionApp(){
   });
   return()=>{mounted=false;subscription.unsubscribe();};
  },[supabase,refresh]);
+ const loadGrants=useCallback(async()=>{
+  if(!supabase||!user)return;
+  setGrantsStatus("loading");setGrantsError("");
+  const {data,error}=await supabase.auth.oauth.getUserGrants();
+  if(error){setGrants([]);setGrantsError(error.message);setGrantsStatus("unavailable");return;}
+  setGrants((data??[]) as OAuthGrant[]);setGrantsStatus("ready");
+ },[supabase,user?.id]);
+ useEffect(()=>{
+  if(tab==="settings"&&user&&grantsStatus==="idle")void loadGrants();
+ },[tab,user?.id,grantsStatus,loadGrants]);
+ const revokeGrant=async(grant:OAuthGrant)=>{
+  if(!supabase||busy)return;
+  if(!window.confirm("Disconnect "+grant.client_name+" from your VI Companion account? Its active sessions and refresh tokens will be revoked."))return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   const {error:revokeError}=await supabase.auth.oauth.revokeGrant(grant.client_id);
+   if(revokeError)throw revokeError;
+   setNotice(grant.client_name+" has been disconnected.");
+   setGrants((current)=>current.filter((item)=>item.client_id!==grant.client_id));
+  }catch(err){setError(errorText(err));}
+  finally{setBusy(false);}
+ };
  const run=async(fn:()=>Promise<{error:unknown|null}> ):Promise<boolean>=>{
   if(!supabase||!user)return false;setBusy(true);setError("");setNotice("");
   try{const result=await fn();if(result.error)throw result.error;await refresh();return true;}
@@ -112,7 +138,13 @@ export default function CompanionApp(){
  {tab==="platforms"&&<div className="page">{page("CONSOLE SETUP","Platforms","Manual profiles organize your workspace; they are not console account connections.")}<div className="two-col"><form className="panel form-panel" onSubmit={addPlatform}>{panel("ADD PROFILE","Save a platform",<><label>Console<select value={platform} onChange={e=>setPlatform(e.target.value as Platform)}><option value="ps5">PlayStation 5</option><option value="xbox">Xbox Series X|S</option></select></label><label>Profile label<input value={name} onChange={e=>setName(e.target.value)} placeholder="My main profile" maxLength={60} required/></label><button className="primary-button" disabled={busy}><Plus size={15}/> Save profile</button><p className="form-footnote">No Sony, Microsoft or Rockstar credentials are collected.</p></>)}</form>{panel("SAVED","Platform profiles",d.platforms.length?<div className="list">{d.platforms.map(p=><Row key={p.id} icon={<Gamepad2 size={16}/>} title={p.name} sub={platformName(p.platform)} status="manual"/>)}</div>:<Empty title="No profiles" copy="Add a console profile label."/>)}</div></div>}
  {tab==="collections"&&<div className="page">{page("PERSONAL LIBRARY","Collections","Group your own checklist items into reusable sets.")}<div className="two-col"><form className="panel form-panel" onSubmit={addCollection}>{panel("NEW COLLECTION","Create a collection",<><label>Name<input value={collection} onChange={e=>setCollection(e.target.value)} placeholder="Places to revisit" maxLength={100} required/></label><button className="primary-button" disabled={busy}><Plus size={15}/> Create collection</button></>)}</form>{panel("YOUR LIBRARY","Collections",d.collections.length?<div className="list">{d.collections.map(c=><div className="collection-card" key={c.id}><strong>{c.title}</strong><span>{c.items.filter(i=>i.done).length}/{c.items.length} complete</span>{c.items.map((i)=><button className="check-row" key={i.id} onClick={()=>toggleItem(i)} disabled={busy}>{i.done?<CheckCircle2 size={14}/>:<span className="empty-circle"/>}{i.label}</button>)}<button className="secondary-button" disabled={busy} onClick={()=>addItem(c.id)}><Plus size={13}/> Add item</button></div>)}</div>:<Empty title="Library is empty" copy="Create a collection."/>)}</div></div>}
  {tab==="notes"&&<div className="page">{page("PRIVATE JOURNAL","Notes","A private place for your own planning thoughts.")}<div className="two-col"><form className="panel form-panel" onSubmit={addNote}>{panel("NEW NOTE","Write something",<><label>Title<input value={noteTitle} onChange={e=>setNoteTitle(e.target.value)} placeholder="A thought to remember" maxLength={120} required/></label><label>Note<textarea value={note} onChange={e=>setNote(e.target.value)} rows={5} maxLength={4000} required/></label><button className="primary-button" disabled={busy}><Plus size={15}/> Save note</button></>)}</form>{panel("RECENT","Your notes",d.notes.length?<div className="note-list">{d.notes.map(n=><article className="note-card" key={n.id}><span>{date(n.created_at)}</span><strong>{n.title}</strong><p>{n.body}</p></article>)}</div>:<Empty title="No notes yet" copy="Your first note will appear here."/>)}</div></div>}
- {tab==="settings"&&<div className="page">{page("ACCOUNT & PRIVACY","Settings","Control the preferences and data stored in your account.")}<div className="two-col"><form className="panel form-panel" onSubmit={savePrefs}>{panel("PREFERENCES","Player settings",<><label>Display name<input value={d.displayName} onChange={e=>setD(x=>({...x,displayName:e.target.value}))} placeholder="How should we address you?" maxLength={60}/></label><label>Preferred platform<select value={d.preferredPlatform} onChange={e=>setD(x=>({...x,preferredPlatform:e.target.value as Platform}))}><option value="ps5">PlayStation 5</option><option value="xbox">Xbox Series X|S</option></select></label><label>Spoilers<select value={d.spoilerPreference} onChange={e=>setD(x=>({...x,spoilerPreference:e.target.value}))}><option value="avoid">Avoid spoilers</option><option value="ask_first">Ask before spoilers</option><option value="all_ok">Spoilers are okay</option></select></label><button className="primary-button" disabled={busy}>Save preferences</button></>)}</form>{panel("DATA & SAFETY","Connection and privacy",<><div className="status-grid"><div><span>Storage</span><strong>Supabase account</strong></div><div><span>Console access</span><strong>Not connected</strong></div><div><span>Game media</span><strong>Not collected</strong></div><div><span>Knowledge</span><strong>Rights review required</strong></div></div><button className="secondary-button" disabled={busy} onClick={exportData}><Download size={14}/> Export my data</button><p className="form-footnote">Export includes your profile, sessions, objectives, collections, platform labels, notes and consent records.</p><button className="danger-button" disabled={busy} onClick={deleteAccount}><Trash2 size={14}/> Delete account</button><p className="form-footnote">Permanently deletes your account and personal records. Requires a separate confirmation and typing DELETE.</p></>)}</div></div>}
+ {tab==="settings"&&<div className="page">{page("ACCOUNT & PRIVACY","Settings","Control the preferences and data stored in your account.")}<div className="two-col"><form className="panel form-panel" onSubmit={savePrefs}>{panel("PREFERENCES","Player settings",<><label>Display name<input value={d.displayName} onChange={e=>setD(x=>({...x,displayName:e.target.value}))} placeholder="How should we address you?" maxLength={60}/></label><label>Preferred platform<select value={d.preferredPlatform} onChange={e=>setD(x=>({...x,preferredPlatform:e.target.value as Platform}))}><option value="ps5">PlayStation 5</option><option value="xbox">Xbox Series X|S</option></select></label><label>Spoilers<select value={d.spoilerPreference} onChange={e=>setD(x=>({...x,spoilerPreference:e.target.value}))}><option value="avoid">Avoid spoilers</option><option value="ask_first">Ask before spoilers</option><option value="all_ok">Spoilers are okay</option></select></label><button className="primary-button" disabled={busy}>Save preferences</button></>)}</form>{panel("DATA & SAFETY","Connection and privacy",<><div className="status-grid"><div><span>Storage</span><strong>Supabase account</strong></div><div><span>Console access</span><strong>Not connected</strong></div><div><span>Game media</span><strong>Not collected</strong></div><div><span>Knowledge</span><strong>Rights review required</strong></div></div>
+          <section className="authorized-apps"><div className="grant-heading"><strong>Authorized apps</strong><button type="button" className="quiet-button" disabled={grantsStatus==="loading"||busy} onClick={()=>{setGrantsStatus("idle");void loadGrants();}}><RefreshCw size={12}/> Refresh</button></div>
+          {grantsStatus==="idle"||grantsStatus==="loading"?<p className="form-footnote">Loading connected applications…</p>:null}
+          {grantsStatus==="unavailable"?<p className="form-footnote">Authorized-app management is unavailable until the VI Companion OAuth server is enabled. {grantsError}</p>:null}
+          {grantsStatus==="ready"&&grants.length===0?<p className="form-footnote">No third-party applications currently have an active grant.</p>:null}
+          {grantsStatus==="ready"&&grants.length>0?<div className="grant-list">{grants.map(grant=><div className="grant-row" key={grant.client_id}><div><strong>{grant.client_name}</strong><span>Scopes: {grant.scopes.join(", ")||"none"} · Authorized {date(grant.created_at)}</span></div><button type="button" className="quiet-button" disabled={busy} onClick={()=>revokeGrant(grant)}>Disconnect</button></div>)}</div>:null}
+          </section><button className="secondary-button" disabled={busy} onClick={exportData}><Download size={14}/> Export my data</button><p className="form-footnote">Export includes your profile, sessions, objectives, collections, platform labels, notes and consent records.</p><button className="danger-button" disabled={busy} onClick={deleteAccount}><Trash2 size={14}/> Delete account</button><p className="form-footnote">Permanently deletes your account and personal records. Requires a separate confirmation and typing DELETE.</p></>)}</div></div>}
  <footer className="main-footer"><span>VI COMPANION · INDEPENDENT PLAYER TOOL</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/support">Support</Link></div></footer></div></section></main>;
 }
 function Stat({label,value,note}:{label:string;value:number;note:string}){return <div className="stat-card"><span>{label}</span><strong>{value}</strong><small>{note}</small></div>}
