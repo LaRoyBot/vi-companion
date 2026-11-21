@@ -1,4 +1,5 @@
 "use client";
+import "../auth.css";
 import {useEffect,useState} from "react";
 import type {FormEvent} from "react";
 import Link from "next/link";
