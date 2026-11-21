@@ -7,8 +7,9 @@ const auth = await readFile(new URL("../apps/web/lib/mcp/server.ts", import.meta
 const route = await readFile(new URL("../apps/web/app/mcp/route.ts", import.meta.url), "utf8");
 const metadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
 const challenge = await readFile(new URL("../apps/web/app/.well-known/openai-apps-challenge/route.ts", import.meta.url), "utf8");
-const migration = await readFile(new URL("../supabase/migrations/20261121114000_fix_oauth_resource_claim_and_rls.sql", import.meta.url), "utf8");
-const rlsMigration = await readFile(new URL("../supabase/migrations/20261121114500_harden_oauth_client_resource_guard.sql", import.meta.url), "utf8");
+const hookMigration = await readFile(new URL("../supabase/migrations/20261121115000_fix_oauth_hook_client_id_variable.sql", import.meta.url), "utf8");
+const rlsMigration = await readFile(new URL("../supabase/migrations/20261121114000_fix_oauth_resource_claim_and_rls.sql", import.meta.url), "utf8");
+const resourceRlsMigration = await readFile(new URL("../supabase/migrations/20261121114500_harden_oauth_client_resource_guard.sql", import.meta.url), "utf8");
 const plugin = JSON.parse(await readFile(new URL("../plugin.json", import.meta.url), "utf8"));
 const manifest = JSON.parse(await readFile(new URL("../mcp.json", import.meta.url), "utf8"));
 const config = await readFile(new URL("../supabase/config.toml", import.meta.url), "utf8");
@@ -32,13 +33,14 @@ test("player data identity is tied to Supabase-verified subject", () => {
   assert.doesNotMatch(auth, /args\.user_id/);
 });
 test("MCP claims are granted only to explicitly allowlisted OAuth clients", () => {
-  assert.match(migration, /claims->>'client_id'/);
-  assert.match(migration, /private\.approved_mcp_oauth_clients/);
-  assert.match(migration, /mcp_scopes/);
-  assert.match(migration, /private\.vi_companion_client_access_allowed/);
-  assert.match(migration, /as restrictive/);
-  assert.match(rlsMigration, /auth\.jwt\(\)->>'resource'/);
-  assert.match(rlsMigration, /approved_mcp_oauth_clients/);
+  assert.match(hookMigration, /claims->>'client_id'/);
+  assert.match(hookMigration, /values \(oauth_client_id\)/);
+  assert.match(hookMigration, /private\.approved_mcp_oauth_clients/);
+  assert.match(hookMigration, /mcp_scopes/);
+  assert.match(rlsMigration, /private\.vi_companion_client_access_allowed/);
+  assert.match(rlsMigration, /as restrictive/);
+  assert.match(resourceRlsMigration, /auth\.jwt\(\)->>'resource'/);
+  assert.match(resourceRlsMigration, /approved_mcp_oauth_clients/);
 });
 test("public directory short description meets the 30-character limit", () => {
   const value = plugin.extensions["com.openai"].interface.shortDescription;
