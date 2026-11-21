@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 
+const headers = {
+  "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+};
+
 export function protectedResourceMetadataResponse() {
   try {
     const resourceValue = process.env.MCP_RESOURCE_URL;
@@ -24,13 +31,15 @@ export function protectedResourceMetadataResponse() {
       resource_documentation: `${origin}/support`,
       resource_policy_uri: `${origin}/privacy`,
       resource_tos_uri: `${origin}/terms`,
-    }, {
-      headers: {
-        "Cache-Control": "public, max-age=300, stale-while-revalidate=600",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    }, { headers });
   } catch {
-    return NextResponse.json({ error: "OAuth resource metadata is not configured." }, { status: 503 });
+    return NextResponse.json(
+      { error: "OAuth resource metadata is not configured." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
+}
+
+export function protectedResourceMetadataOptions() {
+  return new Response(null, { status: 204, headers });
 }
