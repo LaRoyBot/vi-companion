@@ -72,7 +72,7 @@ export default function CompanionApp(){
   catch(e){setError(errorText(e));return false;}
   finally{setBusy(false);}
  };
- const nav:[Tab,string,React.ReactNode][]=[["overview","Overview",<Sparkles size={16}/>],["sessions","Sessions",<Gamepad2 size={16}/>],["objectives","Objectives",<Target size={16}/>],["platforms","Platforms",<Gamepad2 size={16}/>],["collections","Collections",<Layers3 size={16}/>],["notes","Notes",<BookOpen size={16}/>],["settings","Settings",<Settings2 size={16}/>]];
+ const nav:[Tab,string,React.ReactNode][]=[["overview","Overview",<Sparkles key="overview" size={16}/>],["sessions","Sessions",<Gamepad2 key="sessions" size={16}/>],["objectives","Objectives",<Target key="objectives" size={16}/>],["platforms","Platforms",<Gamepad2 key="platforms" size={16}/>],["collections","Collections",<Layers3 key="collections" size={16}/>],["notes","Notes",<BookOpen key="notes" size={16}/>],["settings","Settings",<Settings2 key="settings" size={16}/>]];
  const active=d.sessions.filter(x=>x.status==="active").length;
  const page=(k:string,t:string,c:string)=><div className="page-title"><span className="eyebrow"><i/>{k}</span><h1>{t}</h1><p>{c}</p></div>;
  const panel=(k:string,t:string,body:React.ReactNode)=><section className="panel"><div className="panel-heading"><div><span>{k}</span><h3>{t}</h3></div></div>{body}</section>;
