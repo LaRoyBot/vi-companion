@@ -31,11 +31,11 @@ async function verifyToken(_req:Request,token?:string):Promise<ExtraAuth|undefin
   if(!token)return undefined;
   const authIssuer=issuer(),resourceUri=resource();
   jwks??=createRemoteJWKSet(new URL(`${authIssuer}/.well-known/jwks.json`));
-  const {payload}=await jwtVerify(token,jwks,{issuer:authIssuer,audience:resourceUri,algorithms:["ES256","RS256"],clockTolerance:5});
+  const {payload}=await jwtVerify(token,jwks,{issuer:authIssuer,audience:"authenticated",algorithms:["ES256","RS256"],clockTolerance:5});
   const audiences=Array.isArray(payload.aud)?payload.aud:typeof payload.aud==="string"?[payload.aud]:[];
   const scopes=Array.isArray(payload.mcp_scopes)?payload.mcp_scopes.filter((v):v is string=>typeof v==="string"):[];
   if(typeof payload.client_id!=="string"||typeof payload.sub!=="string"||payload.role!=="authenticated"||
-    !audiences.includes("authenticated")||!audiences.includes(resourceUri)||!scopes.includes("player:read")||typeof payload.exp!=="number")
+    !audiences.includes("authenticated")||payload.resource!==resourceUri||!scopes.includes("player:read")||typeof payload.exp!=="number")
     throw new Error("Invalid VI Companion token");
   return {token,clientId:payload.client_id,scopes:["profile"],expiresAt:payload.exp,extra:{userId:payload.sub,mcpScopes:scopes}};
 }
