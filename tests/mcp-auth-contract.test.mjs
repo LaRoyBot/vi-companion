@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 const auth = await readFile(new URL("../apps/web/lib/mcp/server.ts", import.meta.url), "utf8");
+const dashboard = await readFile(new URL("../apps/web/components/companion-app.tsx", import.meta.url), "utf8");
 const route = await readFile(new URL("../apps/web/app/mcp/route.ts", import.meta.url), "utf8");
 const metadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
 const pathMetadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/mcp/route.ts", import.meta.url), "utf8");
@@ -43,6 +44,12 @@ test("MCP claims are granted only to explicitly allowlisted OAuth clients", () =
   assert.match(rlsMigration, /as restrictive/);
   assert.match(resourceRlsMigration, /auth\.jwt\(\)->>'resource'/);
   assert.match(resourceRlsMigration, /approved_mcp_oauth_clients/);
+});
+test("web dashboard account deletion requires a typed destructive confirmation", () => {
+  assert.match(dashboard, /window\.confirm\(/);
+  assert.match(dashboard, /window\.prompt\(['"]Type DELETE/);
+  assert.match(dashboard, /confirmation!=="DELETE"/);
+  assert.match(dashboard, /functions\.invoke\("delete-account"/);
 });
 test("public directory short description meets the 30-character limit", () => {
   const value = plugin.extensions["com.openai"].interface.shortDescription;
