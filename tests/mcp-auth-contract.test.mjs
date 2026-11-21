@@ -63,8 +63,8 @@ test("MCP claims are granted only to explicitly allowlisted OAuth clients", () =
   assert.match(resourceRlsMigration, /approved_mcp_oauth_clients/);
 });
 test("web dashboard can view and revoke OAuth grants per authenticated user", () => {
-  assert.match(dashboard, /auth\.oauth\.getUserGrants\(\)/);
-  assert.match(dashboard, /auth\.oauth\.revokeGrant\(grant\.client_id\)/);
+  assert.match(dashboard, /auth\.oauth\.listGrants\(\)/);
+  assert.match(dashboard, /auth\.oauth\.revokeGrant\(\{clientId:grant\.client\.id\}\)/);
   assert.match(dashboard, /Disconnect /);
 });
 test("web dashboard account deletion requires a typed destructive confirmation", () => {
