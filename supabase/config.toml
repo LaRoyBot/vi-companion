@@ -1,4 +1,19 @@
 project_id = "ixjbqsviiesrgpnjwvvy"
 
+[auth]
+site_url = "https://vi-companion.vercel.app"
+additional_redirect_urls = [
+  "https://vi-companion.vercel.app/auth/callback"
+]
+
+[auth.oauth_server]
+enabled = true
+authorization_url_path = "/oauth/consent"
+allow_dynamic_registration = true
+
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/private/vi_companion_access_token_hook"
+
 [functions.delete-account]
 verify_jwt = false
