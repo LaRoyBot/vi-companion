@@ -47,8 +47,9 @@ test("public directory short description meets the 30-character limit", () => {
 test("OIDC scopes needed for stable profile identity are explicitly requested", () => {
   const auth = manifest.mcpServers["vi-companion"].extensions["com.openai"].auth;
   assert.deepEqual(auth.baseScopes, ["openid", "email", "profile"]);
-  assert.equal(auth.oidcEnabled, true);
-  assert.deepEqual(auth.oidcScopesSupported, ["openid", "email", "profile"]);
+  assert.deepEqual(auth.baseScopes, ["openid", "email", "profile"]);
+  assert.equal("oidcEnabled" in auth, false);
+  assert.equal("oidcScopesSupported" in auth, false);
 });
 test("hosted Supabase config documents required OAuth server and access-token hook toggles", () => {
   assert.match(config, /\[auth\.oauth_server\]/);
