@@ -55,9 +55,9 @@ async function withUser(ctx:Ctx,scope:"player:read"|"player:write",fn:(x:DBConte
   return fn({user:data.user,db,auth});
 }
 const oauth={securitySchemes:[{type:"oauth2",scopes:["profile"]}]};
-const read=(title:string,description:string,inputSchema:z.ZodType)=>({title,description,inputSchema,annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},_meta:oauth});
-const write=(title:string,description:string,inputSchema:z.ZodType)=>({title,description,inputSchema,annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},_meta:oauth});
-const remove=(title:string,description:string,inputSchema:z.ZodType)=>({title,description,inputSchema,annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:false},_meta:oauth});
+const read=<S extends z.ZodType,>(title:string,description:string,inputSchema:S)=>({title,description,inputSchema,annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},_meta:oauth});
+const write=<S extends z.ZodType,>(title:string,description:string,inputSchema:S)=>({title,description,inputSchema,annotations:{readOnlyHint:false,destructiveHint:false,openWorldHint:false},_meta:oauth});
+const remove=<S extends z.ZodType,>(title:string,description:string,inputSchema:S)=>({title,description,inputSchema,annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:false},_meta:oauth});
 function registerTools(server:McpServer){
   server.registerTool("get_connection_status",{title:"Get connection status",description:"Describe VI Companion capabilities. This does not connect to or inspect a console or game.",inputSchema:z.object({}),annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false},_meta:{securitySchemes:[{type:"noauth"}]}},
     async()=>ok({platform_access:"manual_only",supported_platforms:["ps5","xbox"],game_state_access:false,console_credentials_collected:false,knowledge_retrieval:"disabled_pending_rights_review"}));
