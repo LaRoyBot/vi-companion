@@ -7,7 +7,9 @@ const auth = await readFile(new URL("../apps/web/lib/mcp/server.ts", import.meta
 const route = await readFile(new URL("../apps/web/app/mcp/route.ts", import.meta.url), "utf8");
 const metadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
 const challenge = await readFile(new URL("../apps/web/app/.well-known/openai-apps-challenge/route.ts", import.meta.url), "utf8");
-const migration = await readFile(new URL("../supabase/migrations/20261121113000_secure_mcp_oauth_client_allowlist.sql", import.meta.url), "utf8");
+const migration = await readFile(new URL("../supabase/migrations/20261121114000_fix_oauth_resource_claim_and_rls.sql", import.meta.url), "utf8");
+const rlsMigration = await readFile(new URL("../supabase/migrations/20261121114500_harden_oauth_client_resource_guard.sql", import.meta.url), "utf8");
+const plugin = JSON.parse(await readFile(new URL("../plugin.json", import.meta.url), "utf8"));
 const manifest = JSON.parse(await readFile(new URL("../mcp.json", import.meta.url), "utf8"));
 const config = await readFile(new URL("../supabase/config.toml", import.meta.url), "utf8");
 
@@ -35,6 +37,12 @@ test("MCP claims are granted only to explicitly allowlisted OAuth clients", () =
   assert.match(migration, /mcp_scopes/);
   assert.match(migration, /private\.vi_companion_client_access_allowed/);
   assert.match(migration, /as restrictive/);
+  assert.match(rlsMigration, /auth\.jwt\(\)->>'resource'/);
+  assert.match(rlsMigration, /approved_mcp_oauth_clients/);
+});
+test("public directory short description meets the 30-character limit", () => {
+  const value = plugin.extensions["com.openai"].interface.shortDescription;
+  assert.ok(value.length <= 30, `shortDescription is ${value.length} characters`);
 });
 test("OIDC scopes needed for stable profile identity are explicitly requested", () => {
   const auth = manifest.mcpServers["vi-companion"].extensions["com.openai"].auth;
