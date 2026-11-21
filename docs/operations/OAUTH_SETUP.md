@@ -3,14 +3,15 @@
 ## Canonical endpoints
 
 - MCP resource: `https://vi-companion.vercel.app/mcp`
-- OAuth protected-resource metadata: `https://vi-companion.vercel.app/.well-known/oauth-protected-resource`
+- Path-aware OAuth protected-resource metadata: `https://vi-companion.vercel.app/.well-known/oauth-protected-resource/mcp`
+- Root compatibility metadata: `https://vi-companion.vercel.app/.well-known/oauth-protected-resource`
 - Authorization server issuer: `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1`
 - OIDC discovery: `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1/.well-known/openid-configuration`
 - UserInfo: `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1/oauth/userinfo`
 - Consent UI: `https://vi-companion.vercel.app/oauth/consent`
 - Domain challenge: `https://vi-companion.vercel.app/.well-known/openai-apps-challenge`
 
-The MCP resource server uses stateless Streamable HTTP. The `mcp-handler` adapter verifies JWT signature, issuer, expiry, resource audience, OAuth client ID and explicit internal MCP scopes. Each player-data call is then validated with Supabase Auth and executed as the authenticated user under PostgreSQL RLS.
+The MCP resource server uses stateless Streamable HTTP. Its path-aware protected-resource metadata is inserted before the `/mcp` path as required by RFC 9728; the root alias remains for compatibility. The `mcp-handler` adapter verifies JWT signature, issuer, expiry, Supabase's `authenticated` audience, the exact signed MCP `resource` claim, OAuth client ID and internal MCP capability claims. Each player-data call is then validated with Supabase Auth and executed as the authenticated user under PostgreSQL RLS.
 
 ## Supabase cloud project activation
 
