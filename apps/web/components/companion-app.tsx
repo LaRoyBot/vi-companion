@@ -11,7 +11,7 @@ type CollectionItemRecord=Tables<"collection_items">&{done:boolean};
 type CollectionRecord=Tables<"collections">&{items:CollectionItemRecord[]};
 type SessionRecord={id:string;title:string;desc:string|null;platform:Platform;started:string;ended:string|null;status:"active"|"completed"|"cancelled"};
 type PlatformRecord={id:string;name:string;platform:Platform};
-type Data={sessions:SessionRecord[];objectives:ObjectiveRecord[];platforms:PlatformRecord[];collections:CollectionRecord[];notes:Tables<"personal_notes">[];displayName:string;preferredPlatform:Platform;spoilerPreference:string};
+type Data={sessions:SessionRecord[];objectives:ObjectiveRecord[];platforms:PlatformRecord[];collections:CollectionRecord[];notes:Tables<"personal_notes">[];displayName:string;preferredPlatform:Platform;spoilerPreference:Tables<"player_profiles">["spoiler_preference"]};
 const empty:Data={sessions:[],objectives:[],platforms:[],collections:[],notes:[],displayName:"",preferredPlatform:"ps5",spoilerPreference:"avoid"};
 const platformName=(p:Platform)=>p==="ps5"?"PlayStation 5":"Xbox Series X|S";
 const date=(x:string)=>new Date(x).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
