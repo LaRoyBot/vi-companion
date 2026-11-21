@@ -25,7 +25,7 @@ const issuer = () => {
   if(u.protocol!=="https:"||!u.pathname.endsWith("/auth/v1"))throw new Error("Invalid Supabase auth issuer");
   return value.replace(/\/$/,"");
 };
-const metadata = () => new URL("/.well-known/oauth-protected-resource",resource()).toString();
+const metadata = () => new URL("/.well-known/oauth-protected-resource/mcp",new URL(resource()).origin).toString();
 let jwks:ReturnType<typeof createRemoteJWKSet>|undefined;
 async function verifyToken(_req:Request,token?:string):Promise<ExtraAuth|undefined>{
   if(!token)return undefined;
@@ -113,4 +113,4 @@ function registerTools(server:McpServer){
     async({confirmation},c)=>withUser(c as Ctx,"player:write",async({auth})=>{const endpoint=process.env.SUPABASE_FUNCTIONS_URL,key=process.env.SUPABASE_PUBLISHABLE_KEY??process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;if(!endpoint||!key||confirmation!=="DELETE")return fail("Account deletion is not configured or was not confirmed.");const r=await fetch(`${endpoint.replace(/\/$/,"")}/delete-account`,{method:"POST",headers:{Authorization:`Bearer ${auth.token}`,apikey:key,"Content-Type":"application/json"},body:JSON.stringify({confirmation:"DELETE"}),cache:"no-store"});if(!r.ok)return fail("Deletion failed; the account has not been confirmed as deleted.");return ok({deleted:true});}));
 }
 const base=createMcpHandler(registerTools,{serverInfo:{name:"vi-companion",version:"1.0.0"}});
-export const mcpHandler=withMcpAuth(base,verifyToken,{required:false,requiredScopes:["profile"],resourceMetadataPath:"/.well-known/oauth-protected-resource"});
+export const mcpHandler=withMcpAuth(base,verifyToken,{required:false,requiredScopes:["profile"],resourceMetadataPath:"/.well-known/oauth-protected-resource/mcp"});
