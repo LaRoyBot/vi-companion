@@ -1,25 +1,38 @@
-# VI Companion MCP and OAuth runbook
+# VI Companion MCP and OAuth operations
 
-## Resource server
-The canonical MCP endpoint is `https://vi-companion.vercel.app/mcp`, served by Next.js using `mcp-handler` over stateless Streamable HTTP. OAuth middleware validates the JWT signature, exact Supabase Auth issuer, expiry, Supabase `authenticated` audience plus the MCP resource audience, client identity and internal MCP scopes. Each data call is revalidated through Supabase Auth and runs as the signed-in user under PostgreSQL RLS.
+## Canonical endpoints
 
-Protected-resource metadata is at `/.well-known/oauth-protected-resource`. Supabase's authorization server issuer is `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1`.
+- MCP resource: `https://vi-companion.vercel.app/mcp`
+- OAuth protected-resource metadata: `https://vi-companion.vercel.app/.well-known/oauth-protected-resource`
+- Authorization server issuer: `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1`
+- OIDC discovery: `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1/.well-known/openid-configuration`
+- UserInfo: `https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1/oauth/userinfo`
+- Consent UI: `https://vi-companion.vercel.app/oauth/consent`
+- Domain challenge: `https://vi-companion.vercel.app/.well-known/openai-apps-challenge`
 
-## Supabase dashboard configuration
-For project `ixjbqsviiesrgpnjwvvy`:
+The MCP resource server uses stateless Streamable HTTP. The `mcp-handler` adapter verifies JWT signature, issuer, expiry, resource audience, OAuth client ID and explicit internal MCP scopes. Each player-data call is then validated with Supabase Auth and executed as the authenticated user under PostgreSQL RLS.
 
-1. Authentication → URL Configuration: Site URL `https://vi-companion.vercel.app`; allow `https://vi-companion.vercel.app/auth/callback`.
-2. Authentication → OAuth Server: enable OAuth 2.1.
-3. Set Authorization Path to `/oauth/consent`.
-4. Enable Dynamic Client Registration for ChatGPT.
-5. Authentication → JWT Signing Keys: activate an asymmetric ES256 or RS256 signing key. The MCP server intentionally rejects HS256.
-6. Authentication → Hooks: attach `private.vi_companion_access_token_hook(jsonb)` as the Custom Access Token Hook.
-7. Enable email/password or another supported account sign-in provider.
+## Supabase cloud project activation
 
-Supabase's custom token hook records OAuth-issued client IDs in a private review queue. It does **not** grant the MCP audience or player scopes until an operator explicitly approves that client ID in `private.approved_mcp_oauth_clients`. This prevents unrelated OAuth clients registered with the same Supabase project from using the VI Companion resource.
+The dedicated Supabase project is `ixjbqsviiesrgpnjwvvy`, region `ap-south-1`. The code configuration is committed in `supabase/config.toml`, but changing that file in GitHub does not itself change hosted Supabase Auth settings.
 
-## OAuth client approval
-After ChatGPT first initiates DCR and requests authorization, inspect pending IDs in Supabase SQL Editor:
+Enable the following in Supabase Dashboard → Authentication:
+
+1. **URL Configuration:** Site URL `https://vi-companion.vercel.app`; additional redirect URL `https://vi-companion.vercel.app/auth/callback`.
+2. **OAuth Server:** enable OAuth 2.1, set authorization path `/oauth/consent`, enable Dynamic Client Registration.
+3. **JWT Signing Keys:** activate an asymmetric ES256 or RS256 signing key. The MCP service intentionally rejects HS256.
+4. **Hooks:** attach `private.vi_companion_access_token_hook(jsonb)` as the Custom Access Token Hook.
+5. **Authentication providers:** enable the selected first-party account sign-in provider. Email signup is implemented in the web UI.
+
+The project's Auth APIs currently report `feature_disabled` for OAuth discovery, so OAuth Server is not yet enabled in the hosted project. Do not report OAuth as working until that endpoint responds with discovery metadata and an end-to-end PKCE flow succeeds.
+
+## OAuth scopes and profile identity
+
+`mcp.json` requests `openid email profile` on every OAuth request. Supabase provides OIDC discovery and `/oauth/userinfo`; these let ChatGPT associate the connected account and obtain email identity. The custom resource-server scope is separate from OIDC scopes.
+
+The custom access-token hook records new OAuth `client_id` values in `private.mcp_oauth_client_review_queue`. It grants the MCP resource audience and `mcp_scopes` only after that exact client ID has been approved in `private.approved_mcp_oauth_clients`. An unreviewed client receives no VI Companion MCP access.
+
+After the official ChatGPT DCR client appears, inspect:
 
 ```sql
 select client_id, first_seen_at, last_seen_at, seen_count
@@ -27,26 +40,21 @@ from private.mcp_oauth_client_review_queue
 order by last_seen_at desc;
 ```
 
-Verify a candidate is the official ChatGPT OAuth client registered for VI Companion. Then approve only that exact ID:
+Independently verify the client belongs to the ChatGPT connection for VI Companion, then insert only that ID:
 
 ```sql
 insert into private.approved_mcp_oauth_clients(client_id, display_name)
-values ('<verified-chatgpt-dcr-client-id>', 'OpenAI ChatGPT — VI Companion')
+values ('<verified-client-id>', 'OpenAI ChatGPT — VI Companion')
 on conflict (client_id) do update
 set display_name = excluded.display_name, active = true;
 ```
 
-Never approve an arbitrary ID. To revoke immediately:
-
-```sql
-update private.approved_mcp_oauth_clients set active = false
-where client_id = '<client-id>';
-```
-
-The next access-token refresh/re-authorization picks up the approved claims. Reconnect ChatGPT after approval.
+To revoke it, set `active = false`. Never approve arbitrary or user-supplied client IDs.
 
 ## Vercel environment
-Configured for Production, Preview and Development:
+
+Production, Preview and Development are configured for:
+
 - `NEXT_PUBLIC_SUPABASE_URL=https://ixjbqsviiesrgpnjwvvy.supabase.co`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>`
 - `SUPABASE_URL=https://ixjbqsviiesrgpnjwvvy.supabase.co`
@@ -54,23 +62,21 @@ Configured for Production, Preview and Development:
 - `SUPABASE_FUNCTIONS_URL=https://ixjbqsviiesrgpnjwvvy.supabase.co/functions/v1`
 - `MCP_AUTH_ISSUER=https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1`
 - `MCP_RESOURCE_URL=https://vi-companion.vercel.app/mcp`
-- `OPENAI_APPS_CHALLENGE_TOKEN=<token returned by the OpenAI developer portal>` (add only after the portal creates it)
 
-Never expose a service-role key in the Next.js project environment.
+Do not expose a service-role key in the Next.js project environment.
 
-## OpenAI domain verification
-The OpenAI portal generates a unique token. Configure it as `OPENAI_APPS_CHALLENGE_TOKEN`. The route `/.well-known/openai-apps-challenge` returns that exact raw string with no newline. Do not guess the value or publish the token elsewhere.
+### OpenAI domain verification
 
-## Smoke tests
-- `GET /api/health` returns 200.
-- `GET /.well-known/oauth-protected-resource` lists the canonical resource and Supabase authorization server.
-- MCP initialize and tools/list work over Streamable HTTP.
-- Unauthenticated player-data tool calls include `mcp/www_authenticate`.
-- Expired, HS256, wrong-issuer, wrong-audience and unapproved OAuth-client tokens are rejected.
-- Approved DCR/PKCE tokens contain `client_id`, `sub`, `role=authenticated`, both allowed audiences and `mcp_scopes`.
-- Password/magic-link tokens do not receive the MCP resource audience or scopes.
-- Verify cross-account isolation, child-row ownership, note privacy and collection progress.
-- Test deletion only with a dedicated test account.
+The OpenAI developer portal generates the challenge token. Add the exact token as encrypted Vercel environment variable `OPENAI_APPS_CHALLENGE_TOKEN` for Production, then redeploy. The challenge route returns that exact string as `text/plain`, with no JSON wrapper or extra newline. The route returns 503 until the portal-generated value exists; it must not be guessed.
 
-## Public listing gates
-Publisher verification, OpenAI portal domain verification, five positive and three negative test cases, reviewer access, an authentic walkthrough recording and approval are separate portal steps. Privacy and terms need legal/operator details and approval before public launch.
+## Validation and release gates
+
+- Health endpoint: `/api/health` reports application configuration.
+- Protected-resource metadata: correct canonical resource and issuer.
+- MCP: initialize, tools/list and unauthenticated `get_connection_status` call succeed over Streamable HTTP.
+- Auth challenge: player-data call without a bearer returns the MCP authentication challenge.
+- OAuth: DCR, PKCE, UserInfo, refresh, client allowlisting and audience validation pass end-to-end.
+- Negative auth: expired, HS256, wrong issuer, wrong audience, ordinary password token and unapproved OAuth client are rejected.
+- Isolation: cross-user access is blocked for tables and child rows; note contents are private; exports and account deletion work with a dedicated test account.
+- Public listing: verified publisher identity, portal challenge, current production tool scan, exactly five positive and three negative test cases, reviewer access, demo recording, approved privacy policy and terms, and review acceptance.
+- Legal: the public policy pages are placeholders and need operator/contact details, retention schedule, processor list, transfer terms and legal review before public use.
