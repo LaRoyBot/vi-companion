@@ -6,8 +6,11 @@ const root = new URL("../", import.meta.url);
 const auth = await readFile(new URL("../apps/web/lib/mcp/server.ts", import.meta.url), "utf8");
 const dashboard = await readFile(new URL("../apps/web/components/companion-app.tsx", import.meta.url), "utf8");
 const route = await readFile(new URL("../apps/web/app/mcp/route.ts", import.meta.url), "utf8");
+const health = await readFile(new URL("../apps/web/app/api/health/route.ts", import.meta.url), "utf8");
 const metadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
 const pathMetadata = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/mcp/route.ts", import.meta.url), "utf8");
+const metadataHelper = await readFile(new URL("../apps/web/lib/mcp/metadata.ts", import.meta.url), "utf8");
+const rootRoute = await readFile(new URL("../apps/web/app/.well-known/oauth-protected-resource/route.ts", import.meta.url), "utf8");
 const challenge = await readFile(new URL("../apps/web/app/.well-known/openai-apps-challenge/route.ts", import.meta.url), "utf8");
 const hookMigration = await readFile(new URL("../supabase/migrations/20261121115000_fix_oauth_hook_client_id_variable.sql", import.meta.url), "utf8");
 const rlsMigration = await readFile(new URL("../supabase/migrations/20261121114000_fix_oauth_resource_claim_and_rls.sql", import.meta.url), "utf8");
@@ -25,10 +28,23 @@ test("resource uses asymmetric signature, Supabase issuer, MCP audience and expi
   assert.match(auth, /payload\.client_id/);
   assert.match(auth, /payload\.resource!==resourceUri/);
 });
-test("official stateless Streamable HTTP adapter and OAuth middleware are mounted", () => {
+test("official stateless Streamable HTTP adapter and OAuth middleware are mounted with CORS preflight", () => {
   assert.match(auth, /createMcpHandler/);
   assert.match(auth, /withMcpAuth/);
   assert.match(route, /mcpHandler/);
+  assert.match(route, /export async function OPTIONS/);
+  assert.match(route, /chatgpt\.com/);
+  assert.match(route, /Access-Control-Expose-Headers/);
+});
+test("protected-resource metadata routes answer CORS preflight", () => {
+  assert.match(metadata, /Access-Control-Allow-Origin/);
+  assert.match(metadata, /Access-Control-Allow-Methods/);
+  assert.match(rootRoute, /export function OPTIONS/);
+  assert.match(pathRoute, /export function OPTIONS/);
+});
+test("health endpoint distinguishes a running website from incomplete OAuth and domain setup", () => {
+  assert.match(health, /pending_dashboard_activation/);
+  assert.match(health, /pending_portal_token/);
 });
 test("player data identity is tied to Supabase-verified subject", () => {
   assert.match(auth, /db\.auth\.getUser\(auth\.token\)/);
@@ -81,6 +97,8 @@ test("console/game-state and rights-gated knowledge stay disabled", () => {
 test("protected-resource metadata publishes the canonical resource and issuer", () => {
   assert.match(metadata, /protectedResourceMetadataResponse/);
   assert.match(pathMetadata, /protectedResourceMetadataResponse/);
+  assert.match(metadataHelper, /Access-Control-Allow-Origin/);
+  assert.match(metadataHelper, /protectedResourceMetadataOptions/);
   assert.match(auth, /oauth-protected-resource\/mcp/);
 });
 test("OpenAI domain challenge returns only the exact configured portal token", () => {
