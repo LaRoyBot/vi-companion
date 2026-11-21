@@ -14,6 +14,7 @@ const resourceRlsMigration = await readFile(new URL("../supabase/migrations/2026
 const plugin = JSON.parse(await readFile(new URL("../plugin.json", import.meta.url), "utf8"));
 const manifest = JSON.parse(await readFile(new URL("../mcp.json", import.meta.url), "utf8"));
 const config = await readFile(new URL("../supabase/config.toml", import.meta.url), "utf8");
+const performanceMigration = await readFile(new URL("../supabase/migrations/20261121120000_index_foreign_keys_and_optimize_owner_policies.sql", import.meta.url), "utf8");
 
 test("resource uses asymmetric signature, Supabase issuer, MCP audience and expiration", () => {
   assert.match(auth, /algorithms:\["ES256","RS256"\]/);
@@ -54,6 +55,12 @@ test("OIDC scopes needed for stable profile identity are explicitly requested", 
   assert.deepEqual(auth.oidcScopesSupported, ["openid", "email", "profile"]);
   assert.match(auth.oidcConfigurationUrl, /openid-configuration/);
   assert.match(auth.oidcUserinfoEndpoint, /oauth\/userinfo/);
+});
+test("foreign-key lookups are indexed and ownership RLS policies use initplan-safe auth calls", () => {
+  assert.match(performanceMigration, /objective_updates_objective_id_idx/);
+  assert.match(performanceMigration, /play_sessions_platform_profile_id_idx/);
+  assert.match(performanceMigration, /user_consents_user_id_idx/);
+  assert.match(performanceMigration, /user_id = \(select auth\.uid\(\)\)/);
 });
 test("hosted Supabase config documents required OAuth server and access-token hook toggles", () => {
   assert.match(config, /\[auth\.oauth_server\]/);
