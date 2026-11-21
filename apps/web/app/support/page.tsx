@@ -1,4 +1,53 @@
 import Link from "next/link";
+
+const faqs = [
+  {
+    title: "What can VI Companion access?",
+    body: "Only the records and preferences you save to your VI Companion account. Profile, session, objective, collection and note tools run against the authenticated account and are protected by user-scoped database policies.",
+  },
+  {
+    title: "Does it connect to my PlayStation or Xbox?",
+    body: "No. PS5 and Xbox are manually selected platform labels. VI Companion does not collect console credentials, connect to PSN or Xbox, inspect a console, read live game state or control gameplay.",
+  },
+  {
+    title: "Can it provide GTA VI mission guides or live information?",
+    body: "Game-derived knowledge retrieval is disabled pending a rights review. The app will not claim live game access or retrieve content from unapproved sources.",
+  },
+  {
+    title: "How do I connect it to ChatGPT?",
+    body: "Use the VI Companion app connection flow in ChatGPT when the app is available to your account. Sign in to VI Companion and review the requested access on the consent screen before approving.",
+  },
+  {
+    title: "How do I export or delete my data?",
+    body: "The connected MCP integration provides an export action. Account deletion is a separate, destructive action and requires the exact confirmation phrase DELETE. Once processed, the account and associated user records are removed.",
+  },
+  {
+    title: "Where do I report a bug or security issue?",
+    body: "For general bugs, use the repository issue tracker. For a vulnerability, use GitHub Security Advisories and do not publish details or secrets in an ordinary issue.",
+  },
+];
+
 export default function SupportPage() {
-  return <main className="document-shell"><div className="document-brand"><span className="brand-mark">VI</span><b>VI COMPANION</b></div><article className="document-card"><div className="eyebrow"><span className="eyebrow-line"/> HELP DESK</div><h1>Help & setup</h1><p>Use this page to understand what the companion currently does and how to configure a local development environment.</p><div className="support-list"><div className="support-item"><strong>Why does it say local demo?</strong><p>No Supabase project is configured in this environment. Demo entries remain in your browser and are not synced to a server.</p></div><div className="support-item"><strong>How do I enable account sync?</strong><p>Create a separate Supabase project for VI Companion, apply the checked-in migration, enable Auth, then add the new project's URL and publishable key to the web app's environment variables. Never reuse another product's production database.</p></div><div className="support-item"><strong>Does it connect to my PS5 or Xbox?</strong><p>No. Platform labels are manual records. The current build does not inspect a console, read game state, capture gameplay or control a game.</p></div><div className="support-item"><strong>Why are GTA-specific AI guides disabled?</strong><p>Game-content use and generative-AI processing require legal and rights review. The knowledge and game-media processing features remain disabled until an approved scope exists.</p></div><div className="support-item"><strong>How can I report a security issue?</strong><p>See the repository security advisory page once the public repository exists. Do not post secrets in a public issue.</p></div></div></article><Link className="document-back" href="/">← Back to companion</Link></main>;
+  return (
+    <main className="document-shell">
+      <div className="document-brand"><span className="brand-mark">VI</span><b>VI COMPANION</b></div>
+      <article className="document-card">
+        <div className="eyebrow"><span className="eyebrow-line"/> PLAYER SUPPORT</div>
+        <h1>Help & support</h1>
+        <p>VI Companion keeps your own player records organized across devices. Here are the current capabilities and important boundaries.</p>
+        <div className="support-list">
+          {faqs.map((item) => (
+            <div className="support-item" key={item.title}>
+              <strong>{item.title}</strong>
+              <p>{item.body}</p>
+            </div>
+          ))}
+        </div>
+        <h2>Contact and issue reporting</h2>
+        <p>For product questions and bugs, use the <Link href="https://github.com/LaRoyBot/vi-companion/issues">GitHub issue tracker</Link>. For private security reports, use <Link href="https://github.com/LaRoyBot/vi-companion/security/advisories/new">GitHub Security Advisories</Link>.</p>
+        <p className="legal-note">Privacy policy and terms are still draft documents and must be reviewed and completed before general public launch.</p>
+      </article>
+      <Link className="document-back" href="/">← Back to companion</Link>
+    </main>
+  );
 }
