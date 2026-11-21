@@ -16,15 +16,7 @@
               "openid",
               "email",
               "profile"
-            ],
-            "oidcEnabled": true,
-            "oidcScopesSupported": [
-              "openid",
-              "email",
-              "profile"
-            ],
-            "oidcConfigurationUrl": "https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1/.well-known/openid-configuration",
-            "oidcUserinfoEndpoint": "https://ixjbqsviiesrgpnjwvvy.supabase.co/auth/v1/oauth/userinfo"
+            ]
           }
         }
       }
