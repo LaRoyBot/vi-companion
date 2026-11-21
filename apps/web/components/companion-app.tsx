@@ -87,8 +87,8 @@ export default function CompanionApp(){
   try{
    const {error:revokeError}=await supabase.auth.oauth.revokeGrant({clientId:grant.client.id});
    if(revokeError)throw revokeError;
-   setNotice(grant.client_name+" has been disconnected.");
-   setGrants((current)=>current.filter((item)=>item.client_id!==grant.client_id));
+   setNotice(grant.client.name+" has been disconnected.");
+   setGrants((current)=>current.filter((item)=>item.client.id!==grant.client.id));
   }catch(err){setError(errorText(err));}
   finally{setBusy(false);}
  };
@@ -143,7 +143,7 @@ export default function CompanionApp(){
           {grantsStatus==="idle"||grantsStatus==="loading"?<p className="form-footnote">Loading connected applications…</p>:null}
           {grantsStatus==="unavailable"?<p className="form-footnote">Authorized-app management is unavailable until the VI Companion OAuth server is enabled. {grantsError}</p>:null}
           {grantsStatus==="ready"&&grants.length===0?<p className="form-footnote">No third-party applications currently have an active grant.</p>:null}
-          {grantsStatus==="ready"&&grants.length>0?<div className="grant-list">{grants.map(grant=><div className="grant-row" key={grant.client_id}><div><strong>{grant.client_name}</strong><span>Scopes: {grant.scopes.join(", ")||"none"} · Authorized {date(grant.granted_at)}</span></div><button type="button" className="quiet-button" disabled={busy} onClick={()=>revokeGrant(grant)}>Disconnect</button></div>)}</div>:null}
+          {grantsStatus==="ready"&&grants.length>0?<div className="grant-list">{grants.map(grant=><div className="grant-row" key={grant.client.id}><div><strong>{grant.client.name}</strong><span>Scopes: {grant.scopes.join(", ")||"none"} · Authorized {date(grant.granted_at)}</span></div><button type="button" className="quiet-button" disabled={busy} onClick={()=>revokeGrant(grant)}>Disconnect</button></div>)}</div>:null}
           </section><button className="secondary-button" disabled={busy} onClick={exportData}><Download size={14}/> Export my data</button><p className="form-footnote">Export includes your profile, sessions, objectives, collections, platform labels, notes and consent records.</p><button className="danger-button" disabled={busy} onClick={deleteAccount}><Trash2 size={14}/> Delete account</button><p className="form-footnote">Permanently deletes your account and personal records. Requires a separate confirmation and typing DELETE.</p></>)}</div></div>}
  <footer className="main-footer"><span>VI COMPANION · INDEPENDENT PLAYER TOOL</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/support">Support</Link></div></footer></div></section></main>;
 }
