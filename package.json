@@ -1,0 +1,22 @@
+{
+  "name": "vi-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A cross-platform personal gaming companion with a ChatGPT MCP integration.",
+  "workspaces": [
+    "apps/web",
+    "packages/domain"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace @vi-companion/web",
+    "build": "npm run build --workspace @vi-companion/web",
+    "start": "npm run start --workspace @vi-companion/web",
+    "lint": "npm run lint --workspace @vi-companion/web",
+    "typecheck": "npm run typecheck --workspace @vi-companion/web",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "packageManager": "npm@10.9.2"
+}
