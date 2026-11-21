@@ -37,10 +37,11 @@ test("official stateless Streamable HTTP adapter and OAuth middleware are mounte
   assert.match(route, /Access-Control-Expose-Headers/);
 });
 test("protected-resource metadata routes answer CORS preflight", () => {
-  assert.match(metadata, /Access-Control-Allow-Origin/);
-  assert.match(metadata, /Access-Control-Allow-Methods/);
+  assert.match(metadataHelper, /Access-Control-Allow-Origin/);
+  assert.match(metadataHelper, /Access-Control-Allow-Methods/);
+  assert.match(metadataHelper, /protectedResourceMetadataOptions/);
   assert.match(rootRoute, /export function OPTIONS/);
-  assert.match(pathRoute, /export function OPTIONS/);
+  assert.match(pathMetadata, /export function OPTIONS/);
 });
 test("health endpoint distinguishes a running website from incomplete OAuth and domain setup", () => {
   assert.match(health, /pending_dashboard_activation/);
