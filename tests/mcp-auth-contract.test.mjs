@@ -14,9 +14,10 @@ const config = await readFile(new URL("../supabase/config.toml", import.meta.url
 test("resource uses asymmetric signature, Supabase issuer, MCP audience and expiration", () => {
   assert.match(auth, /algorithms:\["ES256","RS256"\]/);
   assert.match(auth, /issuer:authIssuer/);
-  assert.match(auth, /audience:resourceUri/);
+  assert.match(auth, /audience:"authenticated"/);
   assert.match(auth, /payload\.exp/);
   assert.match(auth, /payload\.client_id/);
+  assert.match(auth, /payload\.resource!==resourceUri/);
 });
 test("official stateless Streamable HTTP adapter and OAuth middleware are mounted", () => {
   assert.match(auth, /createMcpHandler/);
@@ -29,9 +30,11 @@ test("player data identity is tied to Supabase-verified subject", () => {
   assert.doesNotMatch(auth, /args\.user_id/);
 });
 test("MCP claims are granted only to explicitly allowlisted OAuth clients", () => {
-  assert.match(migration, /event->>'client_id'/);
+  assert.match(migration, /claims->>'client_id'/);
   assert.match(migration, /private\.approved_mcp_oauth_clients/);
   assert.match(migration, /mcp_scopes/);
+  assert.match(migration, /private\.vi_companion_client_access_allowed/);
+  assert.match(migration, /as restrictive/);
 });
 test("OIDC scopes needed for stable profile identity are explicitly requested", () => {
   const auth = manifest.mcpServers["vi-companion"].extensions["com.openai"].auth;
