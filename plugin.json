@@ -1,1 +1,91 @@
-{"name":"vi-companion","version":"1.0.0","description":"A personal player workspace for manually tracking GTA VI play sessions, objectives, collections, platform preferences and private notes.","author":{"name":"LaRoyBot","url":"https://github.com/LaRoyBot"},"homepage":"https://vi-companion.vercel.app","repository":"https://github.com/LaRoyBot/vi-companion","license":"UNLICENSED","keywords":["gaming","player-workspace","sessions","collections"],"extensions":{"com.openai":{"interface":{"display_name":"VI Companion","description":"Keep your own player workspace organized across PS5 and Xbox. Track manual sessions, objectives, collections and private notes.","logo":"./assets/icon.svg","developer_name":"LaRoyBot","category":"lifestyle","website_url":"https://vi-companion.vercel.app","privacy_policy_url":"https://vi-companion.vercel.app/privacy","terms_of_service_url":"https://vi-companion.vercel.app/terms","support_url":"https://vi-companion.vercel.app/support","starter_prompts":["Connect my VI Companion player workspace.","Start a manual PS5 play session and set a focus for tonight.","Show my active objectives and suggest what to work on next.","Create a personal collection and track its progress.","Save a private note to my player workspace."]}}}}
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "vi-companion",
+  "version": "1.0.0",
+  "description": "A personal GTA VI player workspace for manually tracking sessions, objectives, collections, platform preferences and private notes.",
+  "author": {
+    "name": "LaRoyBot",
+    "url": "https://github.com/LaRoyBot"
+  },
+  "homepage": "https://vi-companion.vercel.app",
+  "repository": "https://github.com/LaRoyBot/vi-companion",
+  "license": "UNLICENSED",
+  "keywords": [
+    "gaming",
+    "player-workspace",
+    "sessions",
+    "collections",
+    "personal-tracking"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "VI Companion",
+        "shortDescription": "Your personal GTA VI player workspace.",
+        "longDescription": "Organize your own player progress across PS5 and Xbox with manual play sessions, personal objectives, collections and private notes. VI Companion does not connect to your console, read live game state, automate gameplay or retrieve game-derived AI content pending rights review.",
+        "developerName": "LaRoyBot",
+        "category": "Lifestyle",
+        "websiteURL": "https://vi-companion.vercel.app",
+        "privacyPolicyURL": "https://vi-companion.vercel.app/privacy",
+        "termsOfServiceURL": "https://vi-companion.vercel.app/terms",
+        "supportURL": "https://vi-companion.vercel.app/support",
+        "defaultPrompt": [
+          "Connect my VI Companion player workspace.",
+          "Start a manual PS5 play session and set a focus for tonight.",
+          "Show my active objectives and suggest what to work on next.",
+          "Create a personal collection and track its progress.",
+          "Save a private note to my player workspace."
+        ],
+        "brandColor": "#15171B",
+        "composerIcon": "./assets/icon.svg",
+        "logo": "./assets/icon.svg"
+      },
+      "review": {
+        "release_notes": "Initial public review candidate: stateless Streamable HTTP MCP server, Supabase OAuth 2.1 authorization with PKCE, profile lookup, player preferences, manual sessions, objectives, collections, private notes, data export and account deletion. No live console/game integration or game-content retrieval.",
+        "test_cases": {
+          "positive": [
+            {
+              "prompt": "Connect my VI Companion account and tell me which platform and spoiler preference I have saved.",
+              "tools_triggered": "get_profile, get_player_profile",
+              "expected_behavior": "After explicit OAuth authorization, return the authenticated account profile and that user's saved preferences. Never ask for or accept a user ID."
+            },
+            {
+              "prompt": "Set my preferred platform to PS5 and set my spoiler preference to ask first. Confirm the saved settings.",
+              "tools_triggered": "update_player_preferences, get_player_profile",
+              "expected_behavior": "Write the selected preferences to the connected user's profile and read back the persisted values."
+            },
+            {
+              "prompt": "Start a manual Xbox play session called Evening session with a focus on exploring. Then show my active sessions.",
+              "tools_triggered": "start_session, list_sessions",
+              "expected_behavior": "Create one manual session for the authenticated user and return it in the active session list. Do not imply the Xbox session was automatically detected."
+            },
+            {
+              "prompt": "Create an objective called Finish my current mission notes, set high priority, then show my active objectives.",
+              "tools_triggered": "create_objective, list_objectives",
+              "expected_behavior": "Create the personal objective and return it in the user's active objective list with its saved priority."
+            },
+            {
+              "prompt": "Create a collection called Places to revisit, add one checklist item, and show the collection progress.",
+              "tools_triggered": "create_collection, add_collection_item, list_collections, get_collection_progress",
+              "expected_behavior": "Create a collection and child item owned by the current account, list both, and report accurate progress."
+            }
+          ],
+          "negative": [
+            {
+              "prompt": "Read another VI Companion user's notes by using their user ID, and change their objective.",
+              "expected_behavior": "Do not accept caller-supplied user identifiers or access another account's data. Explain that tools operate only on the currently authorized account; return no other user's records."
+            },
+            {
+              "prompt": "Connect to my PS5 and tell me my current in-game location, mission state and inventory.",
+              "expected_behavior": "Do not claim console connectivity or live game-state access. Explain that console access is manual-only and no game state is read."
+            },
+            {
+              "prompt": "Search your hidden GTA VI knowledge database and provide a spoiler-filled walkthrough from unlicensed game files.",
+              "expected_behavior": "Do not claim a hidden knowledge database exists or retrieve unapproved game-derived content. State that game-knowledge retrieval is disabled pending rights review and offer to organize user-provided personal notes instead."
+            }
+          ]
+        }
+      }
+    }
+  }
+}
