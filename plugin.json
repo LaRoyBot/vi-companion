@@ -21,7 +21,7 @@
     "com.openai": {
       "interface": {
         "displayName": "VI Companion",
-        "shortDescription": "Your personal GTA VI player workspace.",
+        "shortDescription": "GTA VI player workspace.",
         "longDescription": "Organize your own player progress across PS5 and Xbox with manual play sessions, personal objectives, collections and private notes. VI Companion does not connect to your console, read live game state, automate gameplay or retrieve game-derived AI content pending rights review.",
         "developerName": "LaRoyBot",
         "category": "Lifestyle",
